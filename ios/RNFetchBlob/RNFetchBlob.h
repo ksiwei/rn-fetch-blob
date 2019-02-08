@@ -39,6 +39,7 @@
 @property (retain) UIDocumentInteractionController * documentController;
 
 + (RCTBridge *)getRCTBridge;
++ (UIApplication *)getSharedApplication;
 
 @end
 

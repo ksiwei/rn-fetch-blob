@@ -160,12 +160,17 @@ typedef NS_ENUM(NSUInteger, ResponseFormat) {
     self.task = [session dataTaskWithRequest:req];
     [self.task resume];
     
+
     // network status indicator
-    if ([[options objectForKey:CONFIG_INDICATOR] boolValue]) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:YES];
-        });
+    UIApplication *app = [RNFetchBlob getSharedApplication];
+    if (app != nil) {
+        if ([[options objectForKey:CONFIG_INDICATOR] boolValue]) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [app setNetworkActivityIndicatorVisible:YES];
+            });
+        }
     }
+
 }
 
 ////////////////////////////////////////
@@ -369,9 +374,12 @@ typedef NS_ENUM(NSUInteger, ResponseFormat) {
     NSString * respStr;
     NSString * rnfbRespType;
     
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [[UIApplication sharedApplication] setNetworkActivityIndicatorVisible:NO];
-    });
+    UIApplication *app = [RNFetchBlob getSharedApplication];
+    if (app != nil) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [app setNetworkActivityIndicatorVisible:NO];
+        });
+    }
     
     if (error) {
         if (error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled) {

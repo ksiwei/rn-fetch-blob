@@ -38,9 +38,25 @@ dispatch_queue_t fsQueue;
 
 + (RCTBridge *)getRCTBridge
 {
-    RCTRootView * rootView = (RCTRootView*) [[UIApplication sharedApplication] keyWindow].rootViewController.view;
-    return rootView.bridge;
+    UIApplication *app = [self getSharedApplication];
+    if (app != nil) {
+      RCTRootView * rootView = (RCTRootView*) app.keyWindow.rootViewController.view;
+      return rootView.bridge;
+    }
+    return nil;
 }
+
+
+
++ (UIApplication *)getSharedApplication
+{
+    Class UIApplicationClass = NSClassFromString(@"UIApplication");
+    if (UIApplicationClass && [UIApplicationClass respondsToSelector:@selector(sharedApplication)]) {
+        return [UIApplication performSelector:@selector(sharedApplication)];
+    }
+    return nil;
+}
+
 
 + (BOOL)requiresMainQueueSetup {
     return NO;
@@ -562,16 +578,19 @@ RCT_EXPORT_METHOD(previewDocument:(NSString*)uri scheme:(NSString *)scheme resol
     NSURL * url = [[NSURL alloc] initWithString:utf8uri];
     // NSURL * url = [[NSURL alloc] initWithString:uri];
     documentController = [UIDocumentInteractionController interactionControllerWithURL:url];
-    UIViewController *rootCtrl = [[[[UIApplication sharedApplication] delegate] window] rootViewController];
-    documentController.delegate = self;
-    if(scheme == nil || [[UIApplication sharedApplication] canOpenURL:[NSURL URLWithString:scheme]]) {
-      CGRect rect = CGRectMake(0.0, 0.0, 0.0, 0.0);
-      dispatch_sync(dispatch_get_main_queue(), ^{
-          [documentController  presentOptionsMenuFromRect:rect inView:rootCtrl.view animated:YES];
-      });
-        resolve(@[[NSNull null]]);
-    } else {
-        reject(@"EINVAL", @"scheme is not supported", nil);
+    UIApplication *app = [RNFetchBlob getSharedApplication];
+    if (app != nil) {
+        UIViewController *rootCtrl = [[[app delegate] window] rootViewController];
+        documentController.delegate = self;
+        if(scheme == nil || [app canOpenURL:[NSURL URLWithString:scheme]]) {
+          CGRect rect = CGRectMake(0.0, 0.0, 0.0, 0.0);
+          dispatch_sync(dispatch_get_main_queue(), ^{
+              [documentController  presentOptionsMenuFromRect:rect inView:rootCtrl.view animated:YES];
+          });
+            resolve(@[[NSNull null]]);
+        } else {
+            reject(@"EINVAL", @"scheme is not supported", nil);
+        }
     }
 }
 
@@ -585,7 +604,8 @@ RCT_EXPORT_METHOD(openDocument:(NSString*)uri scheme:(NSString *)scheme resolver
     documentController = [UIDocumentInteractionController interactionControllerWithURL:url];
     documentController.delegate = self;
 
-    if(scheme == nil || [[UIApplication sharedApplication] canOpenURL:[NSURL URLWithString:scheme]]) {
+    UIApplication * app = [RNFetchBlob getSharedApplication];
+    if(scheme == nil || (app != nil && [app canOpenURL:[NSURL URLWithString:scheme]])) {
         dispatch_sync(dispatch_get_main_queue(), ^{
             if([documentController presentPreviewAnimated:YES]) {
                 resolve(@[[NSNull null]]);
@@ -621,8 +641,13 @@ RCT_EXPORT_METHOD(df:(RCTResponseSenderBlock)callback)
 
 - (UIViewController *) documentInteractionControllerViewControllerForPreview: (UIDocumentInteractionController *) controller
 {
-    UIWindow *window = [UIApplication sharedApplication].keyWindow;
-    return window.rootViewController;
+    UIApplication *app = [RNFetchBlob getSharedApplication];
+    if (app!= nil ) {
+        UIWindow *window = app.keyWindow;
+        return window.rootViewController;
+    } else {
+        return nil;
+    }
 }
 
 # pragma mark - check expired network events
